@@ -15,6 +15,7 @@ import df
 from arrays import split_dataset
 from dataset import Dataset
 from result import Result
+from smote import DynamicSMOTE
 
 
 # from test.result import Result
@@ -55,6 +56,17 @@ class Fold:
         self.total_train = np.sum(list(self.count_train.values()))
         self.total_test_no_patch = self.total_test / dataset.image.patch
         self.total_train_no_patch = self.total_train / dataset.image.patch
+
+
+
+        minimo = classifier.best_params_.get('smote__minimo_amostras')
+        quantidade = classifier.best_params_.get('smote__quantidade_gerada')
+        k_neighbors = classifier.best_params_.get('smote__k_neighbors')
+        random_state = classifier.best_params_.get('smote__random_state')
+
+        smote = DynamicSMOTE(random_state, minimo, quantidade, k_neighbors)
+
+        x_train, y_train = smote.fit_resample(x_train, y_train)
 
         logging.info('Train: %s' % self.count_train)
         logging.info('Test: %s' % self.count_test)

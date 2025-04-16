@@ -10,6 +10,7 @@ import joblib
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.model_selection import GridSearchCV
+from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
@@ -22,39 +23,49 @@ from mean import Mean
 from features import Features
 from save import save
 
+from smote import DynamicSMOTE
+
+
 
 datefmt = '%d-%m-%Y+%H-%M-%S'
 dateandtime = datetime.datetime.now().strftime(datefmt)
-logging.basicConfig(format='\033[32m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.INFO)
-logging.basicConfig(format='\033[31m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.WARNING)
-logging.basicConfig(format='\033[35m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.CRITICAL)
+logging.basicConfig(filename='info.log', format='\033[32m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.INFO)
+logging.basicConfig(filename='warning.log', format='\033[31m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.WARNING)
+logging.basicConfig(filename='critical.log', format='\033[35m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.CRITICAL)
 
 parameters = {
+    'DynamicSMOTE': {
+        'smote__random_state': [42],
+        'smote__minimo_amostras': [5],
+        'smote__quantidade_gerada': [150],
+        'smote__k_neighbors': [1]
+    },
     'DecisionTreeClassifier': {
-        'criterion': ['gini', 'entropy'],
-        'splitter': ['best', 'random'],
-        'max_depth': [10, 100, 1000]
+        'clf__criterion': ['gini', 'entropy'],
+        'clf__splitter': ['best', 'random'],
+        'clf__max_depth': [10, 100, 1000]
     },
     'KNeighborsClassifier': {
-        'n_neighbors': [2, 4, 6, 8, 10],
-        'weights': ['uniform', 'distance'],
-        'metric': ['euclidean', 'manhattan']
+        'clf__n_neighbors': [2, 4, 6, 8, 10],
+        'clf__weights': ['uniform', 'distance'],
+        'clf__metric': ['euclidean', 'manhattan']
     },
     'MLPClassifier': {
-        'activation': ['identity', 'logistic', 'tanh', 'relu'],
-        'solver': ['adam', 'sgd'],
-        'learning_rate_init': [0.01, 0.001, 0.0001],
-        'momentum': [0.9, 0.4, 0.1]
+        'clf__activation': ['identity', 'logistic', 'tanh', 'relu'],
+        'clf__solver': ['adam', 'sgd'],
+        'clf__learning_rate_init': [0.01, 0.001, 0.0001],
+        'clf__momentum': [0.9, 0.4, 0.1]
     },
     'RandomForestClassifier': {
-        'n_estimators': [200, 400, 600],
-        'max_features': ['sqrt', 'log2'],
-        'criterion': ['gini', 'entropy']
+        'clf__n_estimators': [200, 400, 600],
+        'clf__max_features': ['sqrt', 'log2'],
+        'clf__criterion': ['gini', 'entropy']
     },
     'SVC': {
-        'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
+        'clf__kernel': ['linear', 'poly', 'rbf', 'sigmoid']
     }
 }
+
 
 def has_pca(config: Config, dataset: Dataset, extractors: dict, x: np.ndarray) -> list:
     """
@@ -135,31 +146,51 @@ def main(config, clf, input, output, pca):
                     logging.warning('the test exist')
                     sys.exit(1)
 
-            output = os.path.join(output, dataset.get_output_name(classifier_name, dataset.count_features))
-            os.makedirs(output, exist_ok=True)
 
-            clf = GridSearchCV(c, parameters[classifier_name], cv=config.folds, scoring=config.cv_metric,
+            # monta o pipeline com o SMOTE e o classificador
+            pipeline = Pipeline(steps=[
+                ('smote', DynamicSMOTE()),
+                ('clf', c)
+            ])
+
+            # junta os parâmetros do SMOTE e do classificador
+            param_grid = {
+                **parameters['DynamicSMOTE'],
+                **parameters[classifier_name]
+            }
+
+            clf = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
                                n_jobs=config.n_jobs, verbose=config.verbose)
 
             with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
                 clf.fit(x, y)
 
             # enable to use predict_proba
-            if isinstance(clf.best_estimator_, SVC):
-                params = dict(probability=True)
-                clf.best_estimator_.set_params(**params)
+            if isinstance(clf.best_estimator_.named_steps["clf"], SVC):
+                clf.best_estimator_.named_steps["clf"].set_params(probability=True)
+
+            minimo = clf.best_params_.get('smote__minimo_amostras')
+            quantidade = clf.best_params_.get('smote__quantidade_gerada')
+            k_neighbors = clf.best_params_.get('smote__k_neighbors')
+            
+            output_path = os.path.join(
+                output,
+                f"{dataset.get_output_name(classifier_name, dataset.count_features)}_SMOTE_minimo_{minimo}_quantidade_{quantidade}_k_neighbors_{k_neighbors}"
+            )
+            os.makedirs(output_path, exist_ok=True)
 
             folds = []
             for f, idx in enumerate(index, start=1):
+                logging.info("STARTING")
                 fold = Fold(f, idx, x, y)
                 fold.run(clf, dataset)
                 fold.results(dataset)
-                fold.save(dataset, output)
+                fold.save(dataset, output_path)
                 folds.append(fold)
 
             means = Mean(folds)
-            means.save(output)
-            save(clf, config, dataset, folds, output)
+            means.save(output_path)
+            save(clf, config, dataset, folds, output_path)
 
 
 if __name__ == '__main__':
