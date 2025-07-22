@@ -34,12 +34,6 @@ logging.basicConfig(filename='warning.log', format='\033[31m [%(asctime)s] (%(le
 logging.basicConfig(filename='critical.log', format='\033[35m [%(asctime)s] (%(levelname)s) {%(filename)s %(lineno)d}  %(message)s \033[0m', datefmt='%d/%m/%Y %H:%M:%S', level=logging.CRITICAL)
 
 parameters = {
-    'DynamicSMOTE': {
-        'smote__random_state': [42],
-        'smote__minimo_amostras': [5],
-        'smote__quantidade_gerada': [150],
-        'smote__k_neighbors': [1]
-    },
     'DecisionTreeClassifier': {
         'clf__criterion': ['gini', 'entropy'],
         'clf__splitter': ['best', 'random'],
@@ -65,6 +59,33 @@ parameters = {
         'clf__kernel': ['linear', 'poly', 'rbf', 'sigmoid']
     }
 }
+
+# parameters = {
+#     'DecisionTreeClassifier': {
+#         'criterion': ['gini', 'entropy'],
+#         'splitter': ['best', 'random'],
+#         'max_depth': [10, 100, 1000]
+#     },
+#     'KNeighborsClassifier': {
+#         'n_neighbors': [2, 4, 6, 8, 10],
+#         'weights': ['uniform', 'distance'],
+#         'metric': ['euclidean', 'manhattan']
+#     },
+#     'MLPClassifier': {
+#         'activation': ['identity', 'logistic', 'tanh', 'relu'],
+#         'solver': ['adam', 'sgd'],
+#         'learning_rate_init': [0.01, 0.001, 0.0001],
+#         'momentum': [0.9, 0.4, 0.1]
+#     },
+#     'RandomForestClassifier': {
+#         'n_estimators': [200, 400, 600],
+#         'max_features': ['sqrt', 'log2'],
+#         'criterion': ['gini', 'entropy']
+#     },
+#     'SVC': {
+#         'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
+#     }
+# }
 
 
 def has_pca(config: Config, dataset: Dataset, extractors: dict, x: np.ndarray) -> list:
@@ -99,7 +120,8 @@ def apply_pca(config: Config, dataset: Dataset, extractors: dict, pca: bool, x: 
 @click.option('-i', '--input', required=True)
 @click.option('-o', '--output', required=False, default='output')
 @click.option('-p', '--pca', is_flag=True, default=False)
-def main(config, clf, input, output, pca):
+@click.option('-s', '--smote')
+def main(config, clf, input, output, pca, smote):
     config = Config()
     config._print()
     classifiers = select_classifiers(config, clf)
@@ -146,18 +168,24 @@ def main(config, clf, input, output, pca):
                     logging.warning('the test exist')
                     sys.exit(1)
 
+                
 
             # monta o pipeline com o SMOTE e o classificador
             pipeline = Pipeline(steps=[
                 ('smote', DynamicSMOTE()),
                 ('clf', c)
             ])
-
             # junta os parâmetros do SMOTE e do classificador
             param_grid = {
-                **parameters['DynamicSMOTE'],
+                **{
+                    'smote__random_state': [42],
+                    'smote__minimo_amostras': [int(smote)],
+                    'smote__k_neighbors': [1]
+                },
                 **parameters[classifier_name]
             }
+
+            print(param_grid)
 
             clf = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
                                n_jobs=config.n_jobs, verbose=config.verbose)
@@ -165,19 +193,20 @@ def main(config, clf, input, output, pca):
             with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
                 clf.fit(x, y)
 
+
             # enable to use predict_proba
+            # if isinstance(clf.best_estimator_, SVC):
+            #     params = dict(probability=True)
+            #     clf.best_estimator_.set_params(**params)
+            # # enable to use predict_proba
             if isinstance(clf.best_estimator_.named_steps["clf"], SVC):
                 clf.best_estimator_.named_steps["clf"].set_params(probability=True)
 
-            minimo = clf.best_params_.get('smote__minimo_amostras')
-            quantidade = clf.best_params_.get('smote__quantidade_gerada')
-            k_neighbors = clf.best_params_.get('smote__k_neighbors')
+            # minimo = clf.best_params_.get('smote__minimo_amostras')
+            # quantidade = clf.best_params_.get('smote__quantidade_gerada')
+            # k_neighbors = clf.best_params_.get('smote__k_neighbors')
             
-            output_path = os.path.join(
-                output,
-                f"{dataset.get_output_name(classifier_name, dataset.count_features)}_SMOTE_minimo_{minimo}_quantidade_{quantidade}_k_neighbors_{k_neighbors}"
-            )
-            os.makedirs(output_path, exist_ok=True)
+            # os.makedirs(output_path, exist_ok=True)
 
             folds = []
             for f, idx in enumerate(index, start=1):
@@ -185,12 +214,12 @@ def main(config, clf, input, output, pca):
                 fold = Fold(f, idx, x, y)
                 fold.run(clf, dataset)
                 fold.results(dataset)
-                fold.save(dataset, output_path)
+                fold.save(dataset, output)
                 folds.append(fold)
 
             means = Mean(folds)
-            means.save(output_path)
-            save(clf, config, dataset, folds, output_path)
+            means.save(output)
+            save(clf, config, dataset, folds, output)
 
 
 if __name__ == '__main__':

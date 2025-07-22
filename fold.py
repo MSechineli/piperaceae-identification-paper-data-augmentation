@@ -16,6 +16,7 @@ from arrays import split_dataset
 from dataset import Dataset
 from result import Result
 from smote import DynamicSMOTE
+from imblearn.over_sampling import SMOTE
 
 
 # from test.result import Result
@@ -49,7 +50,6 @@ class Fold:
         """
         x_train, y_train = split_dataset(self.idx_train, dataset.count_features, dataset.image.patch, self.x, self.y)
         x_test, y_test = split_dataset(self.idx_test, dataset.count_features, dataset.image.patch, self.x, self.y)
-
         self.count_train = collections.Counter(y_train)
         self.count_test = collections.Counter(y_test)
         self.total_test = np.sum(list(self.count_test.values()))
@@ -57,19 +57,45 @@ class Fold:
         self.total_test_no_patch = self.total_test / dataset.image.patch
         self.total_train_no_patch = self.total_train / dataset.image.patch
 
-
-
+        
         minimo = classifier.best_params_.get('smote__minimo_amostras')
-        quantidade = classifier.best_params_.get('smote__quantidade_gerada')
         k_neighbors = classifier.best_params_.get('smote__k_neighbors')
         random_state = classifier.best_params_.get('smote__random_state')
 
-        smote = DynamicSMOTE(random_state, minimo, quantidade, k_neighbors)
+        print(minimo,  k_neighbors, random_state)
+
+        smote = DynamicSMOTE(random_state, minimo, k_neighbors)
+
+        logging.info('Before SMOTE: %s' % self.count_train.items())
 
         x_train, y_train = smote.fit_resample(x_train, y_train)
 
-        logging.info('Train: %s' % self.count_train)
-        logging.info('Test: %s' % self.count_test)
+        
+        logging.info('Train: %s' % self.count_train.items())
+        logging.info('Test: %s' % self.count_test.items())
+        logging.warning('Aplicando smote: ')
+        logging.warning("minimo={}, k_neighbors={}, random_state={}".format(
+            minimo, k_neighbors, random_state
+        ))
+
+
+        # strategy = {
+        #     cls: 20 for cls, count in self.count_train.items()
+        #     if count <= 20
+        # }
+
+        # logging.warning('Aplicando smote: ')
+        # logging.warning(strategy)
+        # logging.warning(self.count_train.items())
+
+
+        # smote = SMOTE(
+        #     sampling_strategy=strategy,
+        #     random_state=10,
+        #     k_neighbors=5
+        # )
+
+        # x_train, y_train = smote.fit_resample(x_train, y_train)
 
         start_timeit = timeit.default_timer()
 

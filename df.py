@@ -50,8 +50,8 @@ def count_train_test(count_train, count_test, dataset) -> pd.DataFrame:
         data['labels'].append(train[0])
 
     df = pd.DataFrame(data, index=None, columns=list(data.keys()))
-    df['labels'] = df[['labels']] \
-        .map(lambda row: list(filter(lambda x: x.label.__eq__(row), dataset.levels))[0].specific_epithet)
+    # df['labels'] = df[['labels']] \
+    #     .map(lambda row: list(filter(lambda x: x.label.__eq__(row), dataset.levels))[0].specific_epithet)
     return df  #
 
 
@@ -164,8 +164,8 @@ def preds(levels, predicts):
     }
     df = pd.DataFrame(data, index=None, columns=list(data.keys()))
 
-    if len(levels) > 0:
-        df = df.map(lambda row: list(filter(lambda x: x.label.__eq__(row), levels))[0].specific_epithet)
+    # if len(levels) > 0:
+    #     df = df.map(lambda row: list(filter(lambda x: x.label.__eq__(row), levels))[0].specific_epithet)
 
     df['equals'] = df.apply(lambda row: row[row == row['y_true']].index.tolist(), axis=1)
     return df

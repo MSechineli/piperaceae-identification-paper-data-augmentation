@@ -239,6 +239,7 @@ class Dataset:
         fold = 0
         y = []
 
+
         for p in sorted(pathlib.Path(self.input).rglob('*.csv')):
             if 'dataset' not in p.stem and 'samples' not in p.stem:
                 fold = p.stem
@@ -246,8 +247,8 @@ class Dataset:
                 df = pd.read_csv(p, sep=',', escapechar='\n')
                 d = df.iloc[0:, 1:]
                 print(d.shape)
-                import sys
-                sys.exit(1)
+                # import sys
+                # sys.exit(1)
                 dfs.append(d)
                 y.append([fold] * d.shape[0])
 

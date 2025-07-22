@@ -8,16 +8,14 @@ from collections import Counter
 class DynamicSMOTE(BaseSampler):
     _parameter_constraints = {
         "random_state": [None, numbers.Integral],
-        "minimo_amostras": [Interval(numbers.Integral, 1, None, closed="left")],
-        "quantidade_gerada": [Interval(numbers.Integral, 1, None, closed="left")],
+        "minimo_amostras": [Interval(numbers.Integral, 0, None, closed="left")],
         "k_neighbors": [Interval(numbers.Integral, 1, None, closed="left")],
         "sampling_strategy": [None],  # Compatibilidade com BaseSampler
     }
 
-    def __init__(self, random_state=None, minimo_amostras=5, quantidade_gerada=10, k_neighbors=5, sampling_strategy=None):
+    def __init__(self, random_state=None, minimo_amostras=5, k_neighbors=5, sampling_strategy=None):
         self.random_state = random_state
         self.minimo_amostras = minimo_amostras
-        self.quantidade_gerada = quantidade_gerada
         self.k_neighbors = k_neighbors
         self.sampling_strategy = sampling_strategy
         self._sampling_type = "over-sampling"  # Necessário para BaseSampler
@@ -26,12 +24,17 @@ class DynamicSMOTE(BaseSampler):
     def _fit_resample(self, X, y):
         class_counts = Counter(y)
 
-        if not self.minimo_amostras or not self.quantidade_gerada or not self.k_neighbors:
+
+        if not self.minimo_amostras or not self.k_neighbors:
             print("SEM PARAMETROS")
+            return X, y
+        
+        if(self.minimo_amostras == 0):
+            print("Quantidade gerada 0")
             return X, y
 
         strategy = {
-            cls: self.quantidade_gerada for cls, count in class_counts.items()
+            cls: self.minimo_amostras for cls, count in class_counts.items()
             if count <= self.minimo_amostras
         }
 
