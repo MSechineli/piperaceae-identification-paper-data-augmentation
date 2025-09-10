@@ -189,27 +189,6 @@ def main(config, clf, input, output, pca, smote):
 
             print(param_grid)
 
-            # clf = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
-            #                    n_jobs=config.n_jobs, verbose=config.verbose)
-
-            # with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
-            #     clf.fit(x, y)
-
-
-            # # enable to use predict_proba
-            # # if isinstance(clf.best_estimator_, SVC):
-            # #     params = dict(probability=True)
-            # #     clf.best_estimator_.set_params(**params)
-            # # # enable to use predict_proba
-            # if isinstance(clf.best_estimator_.named_steps["clf"], SVC):
-            #     clf.best_estimator_.named_steps["clf"].set_params(probability=True)
-
-            # minimo = clf.best_params_.get('smote__minimo_amostras')
-            # quantidade = clf.best_params_.get('smote__quantidade_gerada')
-            # k_neighbors = clf.best_params_.get('smote__k_neighbors')
-            
-            # os.makedirs(output_path, exist_ok=True)
-
             folds = []
             for f, idx in enumerate(index, start=1):
                 logging.info("STARTING")
