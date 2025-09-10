@@ -70,52 +70,8 @@ class Fold:
             classifier.fit(x_train, y_train)
 
 
-        # enable to use predict_proba
-        # if isinstance(classifier.best_estimator_, SVC):
-        #     params = dict(probability=True)
-        #     classifier.best_estimator_.set_params(**params)
-        # # enable to use predict_proba
         if isinstance(classifier.best_estimator_.named_steps["clf"], SVC):
             classifier.best_estimator_.named_steps["clf"].set_params(probability=True)
-
-        # minimo = classifier.best_params_.get('smote__minimo_amostras')
-        # k_neighbors = classifier.best_params_.get('smote__k_neighbors')
-        # random_state = classifier.best_params_.get('smote__random_state')
-
-        # print(minimo,  k_neighbors, random_state)
-
-        # smote = DynamicSMOTE(random_state, minimo, k_neighbors)
-
-        # logging.info('Before SMOTE: %s' % self.count_train.items())
-
-        # x_train, y_train = smote.fit_resample(x_train, y_train)
-
-        
-        # logging.info('Train: %s' % self.count_train.items())
-        # logging.info('Test: %s' % self.count_test.items())
-        # logging.warning('Aplicando smote: ')
-        # logging.warning("minimo={}, k_neighbors={}, random_state={}".format(
-        #     minimo, k_neighbors, random_state
-        # ))
-
-
-        # strategy = {
-        #     cls: 20 for cls, count in self.count_train.items()
-        #     if count <= 20
-        # }
-
-        # logging.warning('Aplicando smote: ')
-        # logging.warning(strategy)
-        # logging.warning(self.count_train.items())
-
-
-        # smote = SMOTE(
-        #     sampling_strategy=strategy,
-        #     random_state=10,
-        #     k_neighbors=5
-        # )
-
-        # x_train, y_train = smote.fit_resample(x_train, y_train)
 
         start_timeit = timeit.default_timer()
 

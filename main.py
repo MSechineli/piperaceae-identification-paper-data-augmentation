@@ -62,34 +62,6 @@ parameters = {
     }
 }
 
-# parameters = {
-#     'DecisionTreeClassifier': {
-#         'criterion': ['gini', 'entropy'],
-#         'splitter': ['best', 'random'],
-#         'max_depth': [10, 100, 1000]
-#     },
-#     'KNeighborsClassifier': {
-#         'n_neighbors': [2, 4, 6, 8, 10],
-#         'weights': ['uniform', 'distance'],
-#         'metric': ['euclidean', 'manhattan']
-#     },
-#     'MLPClassifier': {
-#         'activation': ['identity', 'logistic', 'tanh', 'relu'],
-#         'solver': ['adam', 'sgd'],
-#         'learning_rate_init': [0.01, 0.001, 0.0001],
-#         'momentum': [0.9, 0.4, 0.1]
-#     },
-#     'RandomForestClassifier': {
-#         'n_estimators': [200, 400, 600],
-#         'max_features': ['sqrt', 'log2'],
-#         'criterion': ['gini', 'entropy']
-#     },
-#     'SVC': {
-#         'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
-#     }
-# }
-
-
 def has_pca(config: Config, dataset: Dataset, extractors: dict, x: np.ndarray) -> list:
     """
     Aplica PCA no conjunto de dados. Os valores estão definidos em um dicionário.
@@ -188,27 +160,6 @@ def main(config, clf, input, output, pca, smote):
             }
 
             print(param_grid)
-
-            # clf = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
-            #                    n_jobs=config.n_jobs, verbose=config.verbose)
-
-            # with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
-            #     clf.fit(x, y)
-
-
-            # # enable to use predict_proba
-            # # if isinstance(clf.best_estimator_, SVC):
-            # #     params = dict(probability=True)
-            # #     clf.best_estimator_.set_params(**params)
-            # # # enable to use predict_proba
-            # if isinstance(clf.best_estimator_.named_steps["clf"], SVC):
-            #     clf.best_estimator_.named_steps["clf"].set_params(probability=True)
-
-            # minimo = clf.best_params_.get('smote__minimo_amostras')
-            # quantidade = clf.best_params_.get('smote__quantidade_gerada')
-            # k_neighbors = clf.best_params_.get('smote__k_neighbors')
-            
-            # os.makedirs(output_path, exist_ok=True)
 
             folds = []
             for f, idx in enumerate(index, start=1):
