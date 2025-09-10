@@ -87,6 +87,6 @@ def save(classifier: Any, config: Config, dataset: Dataset, folds: list,
 def save_best(classifier, folds, output):
     output = os.path.join(output, 'best')
     os.makedirs(output, exist_ok=True)
-    save_best_classifier(classifier, output)
-    save_best_info_classifier(classifier, output)
+    # save_best_classifier(classifier, output)
+    # save_best_info_classifier(classifier, output)
     save_best_fold(folds, output)

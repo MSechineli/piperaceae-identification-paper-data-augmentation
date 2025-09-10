@@ -45,7 +45,7 @@ parameters = {
         'clf__metric': ['euclidean', 'manhattan']
     },
     'MLPClassifier': {
-        'clf__activation': ['identity', 'logistic', 'tanh', 'relu'],
+        'clf__activation': ['tanh', 'relu'],
         'clf__solver': ['adam', 'sgd'],
         'clf__learning_rate_init': [0.01, 0.001, 0.0001],
         'clf__momentum': [0.9, 0.4, 0.1]
@@ -56,7 +56,9 @@ parameters = {
         'clf__criterion': ['gini', 'entropy']
     },
     'SVC': {
-        'clf__kernel': ['linear', 'poly', 'rbf', 'sigmoid']
+        'clf__kernel': ['linear', 'rbf', 'sigmoid'],
+        'clf__C': [0.1, 1, 10, 100, 1000],
+        'clf__gamma': ["auto", "scale"]
     }
 }
 
@@ -187,20 +189,20 @@ def main(config, clf, input, output, pca, smote):
 
             print(param_grid)
 
-            clf = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
-                               n_jobs=config.n_jobs, verbose=config.verbose)
+            # clf = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
+            #                    n_jobs=config.n_jobs, verbose=config.verbose)
 
-            with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
-                clf.fit(x, y)
+            # with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
+            #     clf.fit(x, y)
 
 
-            # enable to use predict_proba
-            # if isinstance(clf.best_estimator_, SVC):
-            #     params = dict(probability=True)
-            #     clf.best_estimator_.set_params(**params)
             # # enable to use predict_proba
-            if isinstance(clf.best_estimator_.named_steps["clf"], SVC):
-                clf.best_estimator_.named_steps["clf"].set_params(probability=True)
+            # # if isinstance(clf.best_estimator_, SVC):
+            # #     params = dict(probability=True)
+            # #     clf.best_estimator_.set_params(**params)
+            # # # enable to use predict_proba
+            # if isinstance(clf.best_estimator_.named_steps["clf"], SVC):
+            #     clf.best_estimator_.named_steps["clf"].set_params(probability=True)
 
             # minimo = clf.best_params_.get('smote__minimo_amostras')
             # quantidade = clf.best_params_.get('smote__quantidade_gerada')
@@ -212,7 +214,7 @@ def main(config, clf, input, output, pca, smote):
             for f, idx in enumerate(index, start=1):
                 logging.info("STARTING")
                 fold = Fold(f, idx, x, y)
-                fold.run(clf, dataset)
+                fold.run(config, pipeline, param_grid,dataset)
                 fold.results(dataset)
                 fold.save(dataset, output)
                 folds.append(fold)

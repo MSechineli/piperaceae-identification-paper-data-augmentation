@@ -26,11 +26,9 @@ class DynamicSMOTE(BaseSampler):
 
 
         if not self.minimo_amostras or not self.k_neighbors:
-            print("SEM PARAMETROS")
             return X, y
         
         if(self.minimo_amostras == 0):
-            print("Quantidade gerada 0")
             return X, y
 
         strategy = {
@@ -38,7 +36,6 @@ class DynamicSMOTE(BaseSampler):
             if count <= self.minimo_amostras
         }
 
-        print(strategy)
 
         smote = SMOTE(
             sampling_strategy=strategy,

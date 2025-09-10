@@ -227,7 +227,7 @@ class Dataset:
         data = dict()
         for k in keys:
             data.update({k: [getattr(self, k)]})
-        data.update({'classifier': [classifier.best_estimator_.__class__.__name__],
+        data.update({'classifier': [classifier],
                      'count_levels': [len(self.levels)]})
         df = pd.DataFrame(data, columns=data.keys())
         df.to_csv(filename, index=False, header=True, sep=';', quoting=2, encoding='utf-8')

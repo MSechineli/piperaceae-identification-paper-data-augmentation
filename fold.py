@@ -17,6 +17,11 @@ from dataset import Dataset
 from result import Result
 from smote import DynamicSMOTE
 from imblearn.over_sampling import SMOTE
+import joblib
+from config import Config
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.svm import SVC
 
 
 # from test.result import Result
@@ -40,7 +45,7 @@ class Fold:
         self.total_train_no_patch = None
         self.predicts = None
 
-    def run(self, classifier: Any, dataset: Dataset):
+    def run(self, config: Config, pipeline: Any, param_grid: Any, dataset: Dataset):
         """
         Separa o dataset (treino e teste), usa o classificador para treinar e predizer.
         Com a predição é aplicado a regra da soma, multiplicação e máximo.
@@ -57,26 +62,41 @@ class Fold:
         self.total_test_no_patch = self.total_test / dataset.image.patch
         self.total_train_no_patch = self.total_train / dataset.image.patch
 
+
+        classifier = GridSearchCV(pipeline, param_grid, cv=config.folds, scoring=config.cv_metric,
+                               n_jobs=config.n_jobs, verbose=config.verbose)
+
+        with joblib.parallel_backend(config.backend, n_jobs=config.n_jobs):
+            classifier.fit(x_train, y_train)
+
+
+        # enable to use predict_proba
+        # if isinstance(classifier.best_estimator_, SVC):
+        #     params = dict(probability=True)
+        #     classifier.best_estimator_.set_params(**params)
+        # # enable to use predict_proba
+        if isinstance(classifier.best_estimator_.named_steps["clf"], SVC):
+            classifier.best_estimator_.named_steps["clf"].set_params(probability=True)
+
+        # minimo = classifier.best_params_.get('smote__minimo_amostras')
+        # k_neighbors = classifier.best_params_.get('smote__k_neighbors')
+        # random_state = classifier.best_params_.get('smote__random_state')
+
+        # print(minimo,  k_neighbors, random_state)
+
+        # smote = DynamicSMOTE(random_state, minimo, k_neighbors)
+
+        # logging.info('Before SMOTE: %s' % self.count_train.items())
+
+        # x_train, y_train = smote.fit_resample(x_train, y_train)
+
         
-        minimo = classifier.best_params_.get('smote__minimo_amostras')
-        k_neighbors = classifier.best_params_.get('smote__k_neighbors')
-        random_state = classifier.best_params_.get('smote__random_state')
-
-        print(minimo,  k_neighbors, random_state)
-
-        smote = DynamicSMOTE(random_state, minimo, k_neighbors)
-
-        logging.info('Before SMOTE: %s' % self.count_train.items())
-
-        x_train, y_train = smote.fit_resample(x_train, y_train)
-
-        
-        logging.info('Train: %s' % self.count_train.items())
-        logging.info('Test: %s' % self.count_test.items())
-        logging.warning('Aplicando smote: ')
-        logging.warning("minimo={}, k_neighbors={}, random_state={}".format(
-            minimo, k_neighbors, random_state
-        ))
+        # logging.info('Train: %s' % self.count_train.items())
+        # logging.info('Test: %s' % self.count_test.items())
+        # logging.warning('Aplicando smote: ')
+        # logging.warning("minimo={}, k_neighbors={}, random_state={}".format(
+        #     minimo, k_neighbors, random_state
+        # ))
 
 
         # strategy = {
@@ -108,6 +128,7 @@ class Fold:
         self.predicts = [Result(n_test, dataset.levels, dataset.image.patch, 'max', y_pred_proba, y_test),
                          Result(n_test, dataset.levels, dataset.image.patch, 'mult', y_pred_proba, y_test),
                          Result(n_test, dataset.levels, dataset.image.patch, 'sum', y_pred_proba, y_test)]
+        
 
     def results(self, dataset):
         self.dataframes = {
